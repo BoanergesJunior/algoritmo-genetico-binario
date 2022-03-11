@@ -27,6 +27,46 @@ const tournamentSelection = (population) => {
   return firstChosen.objectiveFunctionValue > secondChosen.objectiveFunctionValue ? firstChosen : secondChosen
 }
 
+const makeCrossover = (firstChosen, secondChosen) => {
+  if (Math.random() < 0.7) {
+    const random = Math.round(Math.random() * (4 - 1) + 1)
+    const hold_1 = firstChosen.binarySpecimen.slice(0, random)
+    const variant_1 = secondChosen.binarySpecimen.split('').slice(random).join('')
+
+    const hold_2 = secondChosen.binarySpecimen.slice(0, random)
+    const variant_2 = firstChosen.binarySpecimen.split('').slice(random).join('')
+
+    const newSpecimen_1 = hold_1 + variant_1
+    const newSpecimen_2 = hold_2 + variant_2
+
+    return [newSpecimen_1, newSpecimen_2]
+  }
+
+  return null
+}
+
+const runCrossover = (firstChosen, secondChosen) => {
+  const newSpecimens = makeCrossover(firstChosen, secondChosen)
+
+  if (newSpecimens == null) return false
+  else {
+    const newPopulation = [
+      firstChosen,
+      secondChosen,
+      {
+        decimalSpecimen: parseInt(newSpecimens[0], 2),
+        binarySpecimen: newSpecimens[0],
+        objectiveFunctionValue: objectiveFunction(parseInt(newSpecimens[0], 2))
+      },
+      {
+        decimalSpecimen: parseInt(newSpecimens[1], 2),
+        binarySpecimen: newSpecimens[1],
+        objectiveFunctionValue: objectiveFunction(parseInt(newSpecimens[1], 2))
+      }
+    ]
+  }
+}
+
 const initialPopulation = () => {
   const population = [];
   for (let i = 0; i < numberOfInitialPopulation; i++) {
@@ -62,7 +102,7 @@ function init() {
   const populationWithoutFirst = populationWithProbability.filter((element) => element !== firstChosen)
   const secondChosen = tournamentSelection(populationWithoutFirst)
 
-  console.log(firstChosen)
-  console.log(secondChosen)
+  const crossover = runCrossover(firstChosen, secondChosen, populationWithProbability)
+
 }
 init()
