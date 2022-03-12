@@ -1,10 +1,10 @@
-const NUMBER_OF_INITIAL_POPULATION = 4
-const NUMBER_OF_ITERATIONS = 5
+const NUMBER_OF_INITIAL_POPULATION = 30
+const NUMBER_OF_ITERATIONS = 200
 const MUTATION_RATE = 0.01
 const CROSSOVER_RATE = 0.7
 
 const objectiveFunction = (x) => {
-  return Math.pow(x, 2) - (3 * x) + 4
+  return Math.pow(x, 2) - 3 * x + 4
 }
 
 const getProbability = (population) => {
@@ -44,7 +44,7 @@ const makeCrossover = (firstChosen, secondChosen) => {
     return [newSpecimen_1, newSpecimen_2]
   }
 
-  return null
+  return [firstChosen.binarySpecimen, secondChosen.binarySpecimen]
 }
 
 const makeMutation = (specimenBit) => {
@@ -66,42 +66,64 @@ const runMutation = (newSpecimens) => {
   return newSpecimensMutation
 }
 
-const runCrossover = (firstChosen, secondChosen) => {
-  const newSpecimens = makeCrossover(firstChosen, secondChosen)
+const runCrossover = (firstChosen, secondChosen, allPopulation) => {
+  let newSpecimens
+  let newSpecimensMutation
 
-  if (newSpecimens == null) return false
+  do {
+    newSpecimens = makeCrossover(firstChosen, secondChosen)
+    newSpecimensMutation = runMutation(newSpecimens)
+  } while (
+    !(
+      generateDecimalSpecimen(newSpecimensMutation[0]) >= -10 &&
+      generateDecimalSpecimen(newSpecimensMutation[0]) <= 10
+    ) ||
+    !(
+      generateDecimalSpecimen(newSpecimensMutation[1]) >= -10 &&
+      generateDecimalSpecimen(newSpecimensMutation[1]) <= 10
+    )
+  )
 
-  else {
-    const newSpecimensMutation = runMutation(newSpecimens)
-    const newPopulation = [
-      firstChosen,
-      secondChosen,
-      {
-        decimalSpecimen: parseInt(newSpecimensMutation[0], 2),
-        binarySpecimen: newSpecimensMutation[0],
-        objectiveFunctionValue: objectiveFunction(parseInt(newSpecimensMutation[0], 2))
-      },
-      {
-        decimalSpecimen: parseInt(newSpecimensMutation[1], 2),
-        binarySpecimen: newSpecimensMutation[1],
-        objectiveFunctionValue: objectiveFunction(parseInt(newSpecimensMutation[1], 2))
-      }
-    ]
-    return newPopulation
-  }
+  const allPopulationSorted = allPopulation[allPopulation.length - 1]
+    .sort((a, b) => b.objectiveFunctionValue - a.objectiveFunctionValue)
+
+  const newPopulation = [
+    {
+      decimalSpecimen: generateDecimalSpecimen(newSpecimensMutation[0]),
+      binarySpecimen: newSpecimensMutation[0],
+      objectiveFunctionValue: objectiveFunction(generateDecimalSpecimen(newSpecimensMutation[0]))
+    },
+    {
+      decimalSpecimen: generateDecimalSpecimen(newSpecimensMutation[1]),
+      binarySpecimen: newSpecimensMutation[1],
+      objectiveFunctionValue: objectiveFunction(generateDecimalSpecimen(newSpecimensMutation[1]))
+    }
+  ]
+
+  return [...allPopulationSorted].slice(0, NUMBER_OF_INITIAL_POPULATION - 2).concat(newPopulation)
+}
+
+const generateDecimalSpecimen = (number) => {
+  const splittedNumber = number.split('')
+  const signal = splittedNumber.shift()
+
+  const decimalSpecimen = parseInt(splittedNumber.join(''), 2)
+
+  return signal === '1' ? decimalSpecimen * -1 : decimalSpecimen
 }
 
 const initialPopulation = () => {
   const population = [];
   for (let i = 0; i < NUMBER_OF_INITIAL_POPULATION; i++) {
     let number = Math.random() * (10 - (-10)) + (-10);
-    number = Math.ceil(number)
+    number = Math.floor(number)
     if (number < 0) {
-      number = number * -1
+      const numberWithoutSignal = number * -1
+
       population.push(
         {
           decimalSpecimen: number,
-          binarySpecimen: '1' + number.toString(2).padStart(4, '0'),
+          binarySpecimen: '1' + numberWithoutSignal.toString(2).padStart(4, '0'),
           objectiveFunctionValue: objectiveFunction(number)
         }
       )
@@ -115,6 +137,7 @@ const initialPopulation = () => {
       )
     }
   }
+
   return population;
 }
 
@@ -146,8 +169,7 @@ const generateBody = (population) => {
     const tdChromosome = document.createElement('td')
     tdChromosome.textContent = specimen.binarySpecimen
     const tdX = document.createElement('td')
-    tdX.textContent = specimen.binarySpecimen.charAt(0) === '0' ? specimen.decimalSpecimen : -1 * specimen.decimalSpecimen
-
+    tdX.textContent = specimen.decimalSpecimen
     tr.appendChild(tdChromosome)
     tr.appendChild(tdX)
     tBody.appendChild(tr)
@@ -160,7 +182,6 @@ const render = (allPopulation) => {
   const container = document.getElementById('container')
   let i = 0
 
-  console.log(container)
   allPopulation.forEach((population) => {
     const family = document.createElement('caption')
     family.textContent = `Generation ${i}`
@@ -183,15 +204,13 @@ function init() {
 
   do {
     const populationWithProbability = getProbability(allPopulation[i - 1])
-
     const firstChosen = tournamentSelection(populationWithProbability)
     const populationWithoutFirst = populationWithProbability.filter((element) => element !== firstChosen)
     const secondChosen = tournamentSelection(populationWithoutFirst)
 
-    const crossover = runCrossover(firstChosen, secondChosen, populationWithProbability)
+    const crossover = runCrossover(firstChosen, secondChosen, allPopulation)
+    allPopulation.push(crossover)
 
-    const newPopulation = crossover ? crossover : [firstChosen, secondChosen, firstChosen, secondChosen]
-    allPopulation.push(newPopulation)
     i += 1
   } while (i < NUMBER_OF_ITERATIONS)
 
