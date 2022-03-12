@@ -146,7 +146,7 @@ const generateBody = (population) => {
     const tdChromosome = document.createElement('td')
     tdChromosome.textContent = specimen.binarySpecimen
     const tdX = document.createElement('td')
-    tdX.textContent = specimen.decimalSpecimen
+    tdX.textContent = specimen.binarySpecimen.charAt(0) === '0' ? specimen.decimalSpecimen : -1 * specimen.decimalSpecimen
 
     tr.appendChild(tdChromosome)
     tr.appendChild(tdX)
@@ -159,6 +159,8 @@ const generateBody = (population) => {
 const render = (allPopulation) => {
   const container = document.getElementById('container')
   let i = 0
+
+  console.log(container)
   allPopulation.forEach((population) => {
     const family = document.createElement('caption')
     family.textContent = `Generation ${i}`
