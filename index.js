@@ -1,5 +1,7 @@
-const numberOfInitialPopulation = 4
-const numberOfIterations = 5
+const NUMBER_OF_INITIAL_POPULATION = 4
+const NUMBER_OF_ITERATIONS = 5
+const MUTATION_RATE = 0.01
+const CROSSOVER_RATE = 0.7
 
 const objectiveFunction = (x) => {
   return Math.pow(x, 2) - (3 * x) + 4
@@ -28,7 +30,7 @@ const tournamentSelection = (population) => {
 }
 
 const makeCrossover = (firstChosen, secondChosen) => {
-  if (Math.random() < 0.7) {
+  if (Math.random() < CROSSOVER_RATE) {
     const random = Math.round(Math.random() * (4 - 1) + 1)
     const hold_1 = firstChosen.binarySpecimen.slice(0, random)
     const variant_1 = secondChosen.binarySpecimen.split('').slice(random).join('')
@@ -45,31 +47,53 @@ const makeCrossover = (firstChosen, secondChosen) => {
   return null
 }
 
+const makeMutation = (specimenBit) => {
+  if (Math.random() < MUTATION_RATE) {
+    specimenBit = specimenBit === '0' ? '1' : '0'
+  }
+  return specimenBit
+}
+
+const runMutation = (newSpecimens) => {
+  const newSpecimensMutation = newSpecimens.map((specimen) => {
+    let specimenModified = ''
+    for (let i = 0; i < specimen.length; i++) {
+      specimenModified += makeMutation(specimen[i])
+    }
+    return specimenModified
+  })
+
+  return newSpecimensMutation
+}
+
 const runCrossover = (firstChosen, secondChosen) => {
   const newSpecimens = makeCrossover(firstChosen, secondChosen)
 
   if (newSpecimens == null) return false
+
   else {
+    const newSpecimensMutation = runMutation(newSpecimens)
     const newPopulation = [
       firstChosen,
       secondChosen,
       {
-        decimalSpecimen: parseInt(newSpecimens[0], 2),
-        binarySpecimen: newSpecimens[0],
-        objectiveFunctionValue: objectiveFunction(parseInt(newSpecimens[0], 2))
+        decimalSpecimen: parseInt(newSpecimensMutation[0], 2),
+        binarySpecimen: newSpecimensMutation[0],
+        objectiveFunctionValue: objectiveFunction(parseInt(newSpecimensMutation[0], 2))
       },
       {
-        decimalSpecimen: parseInt(newSpecimens[1], 2),
-        binarySpecimen: newSpecimens[1],
-        objectiveFunctionValue: objectiveFunction(parseInt(newSpecimens[1], 2))
+        decimalSpecimen: parseInt(newSpecimensMutation[1], 2),
+        binarySpecimen: newSpecimensMutation[1],
+        objectiveFunctionValue: objectiveFunction(parseInt(newSpecimensMutation[1], 2))
       }
     ]
+    return newPopulation
   }
 }
 
 const initialPopulation = () => {
   const population = [];
-  for (let i = 0; i < numberOfInitialPopulation; i++) {
+  for (let i = 0; i < NUMBER_OF_INITIAL_POPULATION; i++) {
     let number = Math.random() * (10 - (-10)) + (-10);
     number = Math.ceil(number)
     if (number < 0) {
@@ -94,15 +118,82 @@ const initialPopulation = () => {
   return population;
 }
 
-function init() {
-  const population = initialPopulation()
-  const populationWithProbability = getProbability(population)
+const generateHead = () => {
+  const table = document.createElement('table')
+  table.className = 'table'
 
-  const firstChosen = tournamentSelection(populationWithProbability)
-  const populationWithoutFirst = populationWithProbability.filter((element) => element !== firstChosen)
-  const secondChosen = tournamentSelection(populationWithoutFirst)
+  const tHead = document.createElement('thead')
+  const trHead = document.createElement('tr')
+  trHead.className = 'trHead'
+  const thChromosome = document.createElement('th')
+  thChromosome.textContent = 'Chromosome'
+  const thX = document.createElement('th')
+  thX.textContent = 'X'
 
-  const crossover = runCrossover(firstChosen, secondChosen, populationWithProbability)
+  trHead.appendChild(thChromosome)
+  trHead.appendChild(thX)
+  tHead.appendChild(trHead)
+  table.appendChild(tHead)
 
+  return table
 }
+
+const generateBody = (population) => {
+  const tBody = document.createElement('tbody')
+
+  population.forEach((specimen) => {
+    const tr = document.createElement('tr')
+    const tdChromosome = document.createElement('td')
+    tdChromosome.textContent = specimen.binarySpecimen
+    const tdX = document.createElement('td')
+    tdX.textContent = specimen.decimalSpecimen
+
+    tr.appendChild(tdChromosome)
+    tr.appendChild(tdX)
+    tBody.appendChild(tr)
+  })
+
+  return tBody
+}
+
+const render = (allPopulation) => {
+  const container = document.getElementById('container')
+  let i = 0
+  allPopulation.forEach((population) => {
+    const family = document.createElement('caption')
+    family.textContent = `Generation ${i}`
+    const table = generateHead(container)
+    const tBody = generateBody(population)
+
+    table.appendChild(tBody)
+    table.appendChild(family)
+    container.appendChild(table)
+    i += 1
+  })
+}
+
+function init() {
+  let i = 1
+  const allPopulation = []
+
+  const population = initialPopulation()
+  allPopulation.push(population)
+
+  do {
+    const populationWithProbability = getProbability(allPopulation[i - 1])
+
+    const firstChosen = tournamentSelection(populationWithProbability)
+    const populationWithoutFirst = populationWithProbability.filter((element) => element !== firstChosen)
+    const secondChosen = tournamentSelection(populationWithoutFirst)
+
+    const crossover = runCrossover(firstChosen, secondChosen, populationWithProbability)
+
+    const newPopulation = crossover ? crossover : [firstChosen, secondChosen, firstChosen, secondChosen]
+    allPopulation.push(newPopulation)
+    i += 1
+  } while (i < NUMBER_OF_ITERATIONS)
+
+  render(allPopulation)
+}
+
 init()
